@@ -97,7 +97,7 @@ static esp_err_t normalize_path(const char *in, char *out, size_t out_len)
 static esp_err_t list_handler(httpd_req_t *req)
 {
     if (!s_usb_mounted) {
-        httpd_resp_send_err(req, HTTPD_503_SERVICE_UNAVAILABLE, "USB disk not mounted");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "USB disk not mounted");
         return ESP_FAIL;
     }
 
@@ -375,28 +375,24 @@ static esp_err_t usb_disk_mount(void)
     };
     ESP_ERROR_CHECK(msc_host_install(&msc_config));
 
-    const msc_host_vfs_config_t vfs_config = {
-        .base_path = BASE_PATH,
-        .sector_size = 512,
-    };
-
-    esp_err_t err = msc_host_vfs_register(&vfs_config);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "msc_host_vfs_register failed: %s", esp_err_to_name(err));
-        return err;
-    }
-
     ESP_LOGI(TAG, "Waiting USB mass storage device...");
     msc_host_device_handle_t msc_device;
-    err = msc_host_install_device(0, &msc_device);
+    esp_err_t err = msc_host_install_device(0, &msc_device);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "No USB disk found: %s", esp_err_to_name(err));
         return err;
     }
 
-    err = msc_host_vfs_mount(msc_device, BASE_PATH, NULL, 0);
+    const esp_vfs_fat_mount_config_t mount_config = {
+        .format_if_mount_failed = false,
+        .max_files = 8,
+        .allocation_unit_size = 0,
+        .use_one_fat = false,
+    };
+
+    err = msc_host_vfs_register(msc_device, &mount_config, BASE_PATH, NULL);
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Mount failed: %s", esp_err_to_name(err));
+        ESP_LOGE(TAG, "msc_host_vfs_register failed: %s", esp_err_to_name(err));
         return err;
     }
 
