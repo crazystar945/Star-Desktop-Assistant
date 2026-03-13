@@ -390,7 +390,7 @@ static esp_err_t usb_disk_mount(void)
         .use_one_fat = false,
     };
 
-    err = msc_host_vfs_register(msc_device, &mount_config, BASE_PATH, NULL);
+    err = msc_host_vfs_register(msc_device, BASE_PATH, &mount_config, NULL);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "msc_host_vfs_register failed: %s", esp_err_to_name(err));
         return err;
